@@ -1,0 +1,7 @@
+https://github.com/SonPhatTranDeveloper/IT-Job-Posting.git
+https://github.com/Coc-di-lam/dpl_evaluation.git
+https://github.com/VinNLP/VietJobs.git
+https://github.com/phuocnguyen90/Data_job_analysis_notebook.git
+https://github.com/opengovsg/careersgovsg-jobs-data.git
+https://github.com/Therockycloud/ADY201m.git
+https://github.com/awesome-jobs/vietnam.git

@@ -1,0 +1,36 @@
+version: field_normalization_v1
+locations:
+  Hà Nội: ['hà nội', 'ha noi', 'hanoi', 'hn']
+  Hồ Chí Minh: ['hồ chí minh', 'ho chi minh city', 'ho chi minh', 'hcmc', 'hcm', 'saigon', 'sài gòn', 'ciudad ho chi minh']
+  Đà Nẵng: ['đà nẵng', 'da nang', 'danang']
+  Hải Phòng: ['hải phòng', 'hai phong']
+  Bắc Ninh: ['bắc ninh', 'bac ninh']
+  Bình Dương: ['bình dương', 'binh duong']
+  Cần Thơ: ['cần thơ', 'can tho']
+  Đồng Nai: ['đồng nai', 'dong nai']
+  Singapore: ['singapore']
+countries:
+  Vietnam: ['việt nam', 'viet nam', 'vietnam']
+  Singapore: ['singapore']
+  Thailand: ['thailand', 'thái lan']
+employment_type:
+  full_time: ['full-time', 'full time', 'fulltime', 'toàn thời gian', 'full-time (toàn thời gian)']
+  part_time: ['part-time', 'part time', 'parttime', 'bán thời gian']
+  contract: ['contract', 'fixed terms', 'fixed-term']
+  permanent: ['permanent']
+  internship: ['internship', 'internship (thực tập)', 'thực tập']
+  freelance: ['freelance']
+  temporary: ['temporary', 'casual']
+  traineeship: ['traineeship']
+work_arrangement:
+  remote: ['remote', 'work from home', 'wfh', 'làm việc từ xa']
+  hybrid: ['hybrid', 'kết hợp']
+  on_site: ['on-site', 'onsite', 'on site', 'tại văn phòng']
+seniority:
+  intern: ['intern', 'internship', 'thực tập sinh']
+  fresher: ['fresher']
+  junior: ['junior']
+  mid: ['mid', 'middle', 'mid-level']
+  senior: ['senior']
+  lead: ['lead', 'tech lead', 'team lead']
+  manager: ['manager']

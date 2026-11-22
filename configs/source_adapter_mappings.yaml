@@ -1,0 +1,6 @@
+# Explicit raw field -> unified field mappings for additional registered sources.
+# No automatic semantic inference. Example used by offline tests:
+fixture_jobs:
+  vacancy_name: job_title
+  duties_text: description
+  must_know: requirements

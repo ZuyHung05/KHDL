@@ -1,0 +1,13 @@
+Backend: Server-side application logic, APIs and services.
+Frontend: Web user interfaces and client-side interaction.
+Fullstack: Explicit responsibilities in both frontend and backend.
+Mobile: Development of mobile phone applications.
+Data Analyst: Data analysis, reporting and BI for decisions.
+Data Engineer: Data pipelines, ETL/ELT, warehouses, lakes and data infrastructure.
+Data Scientist: Statistics, experimentation and predictive or scientific modelling.
+AI/ML Engineer: Building, deploying and operating AI/ML systems.
+DevOps/SRE: CI/CD, operations, reliability, observability and deployment automation.
+Cloud: Design or administration of cloud platforms, architecture, migration, networking or governance.
+Cybersecurity: Security, defense, testing or incident response.
+QA/Testing: Software testing and quality assurance.
+Business Analyst: Business requirements analysis and connecting business to systems.

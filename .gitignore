@@ -1,0 +1,23 @@
+# Local environments and secrets
+.venv/
+.env
+.env.*
+!.env.example
+# Generated datasets, releases, cache, checkpoints and reports stay local
+/data/
+/logs/
+/reports/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+*.sqlite
+*.sqlite-*
+*.db
+# Large external archives and migration inventory
+*.zip
+/docs/project_file_inventory.json
+/docs/PRE_REFACTOR_*
+/docs/LEGACY_PROJECT_README.md
