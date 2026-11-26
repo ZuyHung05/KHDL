@@ -225,7 +225,7 @@ def run_description_fetch(source_id: str, crawl_args: list[str], output_root: st
             raise FileNotFoundError(f"Run make crawl-{source_id} first; missing {listing_path}")
         details_command = [sys.executable, "-m", "src.collection.fetch_job_details",
                            "--in", str(listing_path), "--out", str(jobs_path),
-                           "--errors", str(errors_path), "--site", source_id]
+                           "--errors", str(errors_path)]
         if "--headless" in crawl_args:
             details_command.append("--headless")
         details_result = _run_subprocess(details_command)
