@@ -19,13 +19,22 @@ from .manifest import write_manifest
 
 LOGGER = logging.getLogger("it4930.crawler_collection")
 DEFAULT_LOG = Path("logs/collection.jsonl")
-CRAWLERS = {
-    "itviec": "https://itviec.com/it-jobs",
-    "topdev": "https://topdev.vn/jobs/search",
-    "vietnamworks": "https://www.vietnamworks.com/it-jobs",
-    "topcv": "https://www.topcv.vn/tim-viec-lam-cong-nghe-thong-tin-cr257",
-    "linkedin": "https://www.linkedin.com/jobs/search/?location=Vietnam",
-}
+
+
+def _crawler_sites() -> dict[str, str]:
+    import yaml
+
+    from crawlers.config import ROOT
+
+    data = yaml.safe_load((ROOT / "configs/crawlers.yaml").read_text(encoding="utf-8")) or {}
+    return {
+        sid: cfg["url"]
+        for sid, cfg in (data.get("sites") or {}).items()
+        if cfg.get("url") and cfg.get("enabled", True)
+    }
+
+
+CRAWLERS = _crawler_sites()
 
 
 def _safe_component(value: str, label: str) -> str:

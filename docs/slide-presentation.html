@@ -1,0 +1,397 @@
+<title>Data Engineering Pipeline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  /* layout: single full-screen deck, nav bar bottom, progress hairline top */
+  --bg:#0B1117; --panel:#111B26; --panel2:#16222F; --fg:#E7EEF4; --muted:#93A4B4;
+  --line:#243341; --accent:#3DD6B4; --accent2:#5B8DEF; --warn:#E8B45B; --danger:#E8766B;
+  --display:font-family:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --body:font-family:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#F5F8FA; --panel:#FFFFFF; --panel2:#EEF4F8; --fg:#0F1D2A; --muted:#5A6B7C;
+  --line:#D8E2EA; --accent:#0E9B7E; --accent2:#3468C8; --warn:#A97A1C; --danger:#C84A40;
+  color-scheme:light;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B1117; --panel:#111B26; --panel2:#16222F; --fg:#E7EEF4; --muted:#93A4B4;
+  --line:#243341; --accent:#3DD6B4; --accent2:#5B8DEF; --warn:#E8B45B; --danger:#E8766B;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  overflow:hidden}
+*{box-sizing:border-box}
+.hidden{display:none!important}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:clamp(2.4rem,7vw,4.6rem);line-height:1.02;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,4.5vw,2.6rem);letter-spacing:-.01em}
+h3{font-size:1.05rem;letter-spacing:.01em}
+p{margin:.4rem 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;
+  background:var(--panel2);border:1px solid var(--line);padding:.08em .38em;border-radius:5px}
+.muted{color:var(--muted)}
+.accent{color:var(--accent)}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* progress hairline */
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  width:0;z-index:20;transition:width .45s cubic-bezier(.4,0,.2,1)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+
+#deck{position:fixed;inset:0;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+  padding-block:max(56px,calc(env(safe-area-inset-top,0px) + 2.4rem)) calc(72px + env(safe-area-inset-bottom,0px));
+  padding-inline:max(4px,env(safe-area-inset-left,0px));
+  opacity:0;transform:translateX(4%);pointer-events:none;transition:opacity .5s ease,transform .5s ease;
+  overflow-y:auto;scrollbar-width:thin}
+.slide.current{opacity:1;transform:none;pointer-events:auto;position:relative}
+/* only current is in-flow now */
+.slide{position:fixed}
+.slide.current{position:absolute}
+.wrap{max-width:1100px;margin:0 auto;width:100%}
+
+.eyebrow{font-family:var(--display);text-transform:uppercase;letter-spacing:.22em;font-size:.72rem;
+  color:var(--accent);font-weight:600;margin-bottom:1rem}
+.kicker{font-family:var(--display);letter-spacing:.02em;color:var(--muted);font-size:.9rem;margin-bottom:1.2rem;text-transform:uppercase}
+
+/* stat tiles */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:2rem}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem 1.1rem}
+.stat .num{font-family:var(--display);font-size:2rem;font-weight:700;color:var(--accent);
+  font-variant-numeric:tabular-nums;line-height:1}
+.stat .cap{color:var(--muted);font-size:.82rem;margin-top:.35rem}
+
+/* pipeline rail */
+.rail{display:flex;flex-direction:column;gap:0;margin-top:2rem}
+.mi{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border:1px solid var(--line);
+  background:var(--panel);border-radius:12px}
+.mi+.mi{margin-top:10px}
+.mi .tag{flex:0 0 74px;font-family:var(--display);font-weight:700;color:var(--accent2);
+  font-size:.82rem;letter-spacing:.06em;padding-top:.2rem}
+.mi h3{margin-bottom:.2rem}
+.mi p{margin:0;color:var(--muted);font-size:.93rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:.7rem}
+.chip{font-size:.72rem;font-family:var(--display);letter-spacing:.03em;color:var(--fg);
+  background:var(--panel2);border:1px solid var(--line);padding:.18em .6em;border-radius:999px}
+
+/* cards grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:2rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.2rem}
+.card h3{color:var(--accent2);margin-bottom:.35rem;font-size:1rem}
+.card p{margin:0;color:var(--muted);font-size:.92rem}
+
+/* check list */
+.checks{list-style:none;margin:1.6rem 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.checks li{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:.8rem .95rem;font-size:.94rem;color:var(--fg)}
+.checks li::before{content:"✓";color:var(--accent);font-weight:700;flex:0 0 auto}
+
+/* two-col */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:1.8rem}
+.cols>div{min-width:0}
+.bar-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.bar{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:.62rem .8rem}
+.bar .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:.35rem}
+.bar .row b{font-family:var(--display);font-weight:600}
+.bar .row .v{font-family:var(--display);font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.track{height:7px;background:var(--panel2);border-radius:99px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:2rem;counter-reset:st}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem}
+.step b{display:block;font-family:var(--display);color:var(--accent);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem}
+.step span{font-size:.9rem;color:var(--fg)}
+
+.two-tone{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:2rem}
+.pill{font-family:var(--display);padding:.55em 1.1em;border-radius:999px;font-weight:600;font-size:.85rem}
+.pill.ok{background:rgba(61,214,180,.14);color:var(--accent);border:1px solid rgba(61,214,180,.4)}
+.pill.warn{background:rgba(232,181,91,.12);color:var(--warn);border:1px solid rgba(232,181,91,.4)}
+
+.note{font-size:.88rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:.9rem;margin-top:2rem;max-width:60em}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:15;display:flex;align-items:center;gap:12px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(0deg,var(--bg) 62%,transparent)}
+.dots{display:flex;gap:6px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+.dots button{width:9px;height:9px;border-radius:99px;border:0;background:var(--line);cursor:pointer;padding:0;
+  transition:all .25s}
+.dots button.on{background:var(--accent);width:26px}
+.dots button span.num{display:none}
+.arrow{background:var(--panel);border:1px solid var(--line);color:var(--fg);font-family:var(--display);
+  width:46px;height:46px;border-radius:12px;cursor:pointer;font-size:1.2rem;flex:0 0 auto}
+.arrow:hover{background:var(--panel2);border-color:var(--accent)}
+.count{font-family:var(--display);font-size:.85rem;color:var(--muted);letter-spacing:.05em;flex:0 0 auto;font-variant-numeric:tabular-nums;min-width:48px}
+
+@media (max-width:600px){
+  .cols{grid-template-columns:1fr}
+  .arrow{width:40px;height:40px}
+  .count{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .slide,.fill,#progress{transition:none}
+}
+::selection{background:rgba(61,214,180,.3)}
+</style>
+
+<div id="progress"></div>
+
+<div id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">IT4930 · KHDL · Nhóm 1</div>
+    <h1>Job Data<br>Engineering Pipeline</h1>
+    <p class="kicker" style="text-transform:none;font-size:1.1rem;margin-top:1.4rem">
+      Thu thập – Chuẩn bị – Phân loại role: một pipeline dữ liệu tuyển dụng từ nguồn raw
+      đến curated release bất biến, có checkpoint, fingerprint và đối chiếu nhãn.</p>
+    <div class="stats">
+      <div class="stat"><div class="num">94</div><div class="cap">bộ test local PASS</div></div>
+      <div class="stat"><div class="num">9,427</div><div class="cap">nhóm JD đối chiếu</div></div>
+      <div class="stat"><div class="num">104</div><div class="cap">nhãn legacy chuyển được</div></div>
+      <div class="stat"><div class="num">5,753</div><div class="cap">candidates corpus M02</div></div>
+      <div class="stat"><div class="num">3</div><div class="cap">tầng pipeline M01–M03</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 VẤN ĐỀ -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Bối cảnh</div>
+    <h2>Vấn đề đặt ra</h2>
+    <p class="muted" style="max-width:62ch">Dữ liệu tuyển dụng đến từ nhiều nguồn khác nhau, schema không thống nhất,
+      chứa trùng lặp, thiếu field và chất lượng không đảm bảo — chưa kể việc phân loại vai trò công việc cần
+      chính xác và có thể truy vết (traceable), không phải nhãn cào đại trà.</p>
+    <div class="grid" style="margin-top:1.8rem">
+      <div class="card"><h3>Nhiều nguồn</h3><p>Registry + allowlist, snapshot checksum-addressed, mapping field tường minh theo từng nguồn.</p></div>
+      <div class="card"><h3>Data lộn xộn</h3><p>Unified schema thống nhất, quality flag, cleaning, dedup, normalization, eligibility.</p></div>
+      <div class="card"><h3>Nhãn phải đáng tin</h3><p>Phân loại Gemini có quy trình checkpoint/quota, nhãn là <b>đề xuất</b>, đối chiếu có bằng chứng.</p></div>
+      <div class="card"><h3>Phải tái chạy được</h3><p>Fingerprint input/code/output, checkpoint atomic, resume; release bất biến theo version.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 KIẾN TRÚC -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Kiến trúc</div>
+    <h2>Một pipeline, ba tầng</h2>
+    <div class="rail">
+      <div class="mi">
+        <div class="tag">M01<br>COLLECT</div>
+        <div>
+          <h3>Thu thập &amp; snapshots</h3>
+          <p>Registry nguồn, tải/validate, manifest checksum-addressed, <code>latest.json</code> pointer.</p>
+          <div class="chips"><span class="chip">crawler_ingestion</span><span class="chip">github_ingestion</span><span class="chip">checksum</span><span class="chip">manifest</span></div>
+        </div>
+      </div>
+      <div class="mi">
+        <div class="tag">M02<br>PREPARE</div>
+        <div>
+          <h3>Chuẩn bị &amp; curated release</h3>
+          <p>profile → unified → quality → clean → dedup → normalize → eligibility → publish bất biến.</p>
+          <div class="chips"><span class="chip">unified schema</span><span class="chip">quality flags</span><span class="chip">dedup_v2</span><span class="chip">field normalization</span><span class="chip">eligibility v2</span></div>
+        </div>
+      </div>
+      <div class="mi">
+        <div class="tag">M03<br>CLASSIFY</div>
+        <div>
+          <h3>Frozen corpus + Gemini + reconcile</h3>
+          <p>Đóng băng corpus theo group ID M02, preflight offline, live classification riêng, đối chiếu nhãn legacy.</p>
+          <div class="chips"><span class="chip">curated_corpus</span><span class="chip">quota/cache</span><span class="chip">gemini_client</span><span class="chip">reconcile</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 COLLECTION -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Tầng 1 · Collection</div>
+    <h2>Nguồn dữ liệu được kiểm soát</h2>
+    <p class="muted" style="max-width:62ch">Thêm nguồn mới phải qua registry, allowlist và khai báo mapping field tường minh —
+      tên repository không đủ để hiểu ngữ nghĩa field. Mọi snapshot được checksum-addressed.</p>
+    <div class="grid">
+      <div class="card"><h3>Registry &amp; allowlist</h3><p>Nguồn khai báo trong <code>configs/sources.yaml</code>; schema mới phải có adapter/mapping rõ ràng.</p></div>
+      <div class="card"><h3>Checksum-addressed</h3><p>Snapshot theo <code>snapshot_sha256</code>; checksum lỗi dừng sớm, không tạo con trỏ latest.</p></div>
+      <div class="card"><h3>Dữ liệu giữ local</h3><p><code>data/</code>, SQLite, checkpoint và ZIP ngoài bị <code>.gitignore</code>; repo public không kèm dataset.</p></div>
+      <div class="card"><h3>E2E nguồn mới</h3><p>Fixture đi từ registry → ingestion → curated với schema giả lập khác biệt; chỉ HTTP được mock.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 PREPARATION -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Tầng 2 · Preparation</div>
+    <h2>Chuỗi stage M02 có fingerprint</h2>
+    <p class="muted" style="max-width:62ch">Mỗi stage ghi checkpoint atomic sau khi subprocess thành công &amp; validate output.
+      Fingerprint gồm raw bytes, pointer, code/config và output dependency; input đổi giữa chừng là fail.</p>
+    <div class="steps">
+      <div class="step"><b>Profile</b><span>schema profile + mapping CSV</span></div>
+      <div class="step"><b>Unified</b><span>thống nhất schema đa nguồn</span></div>
+      <div class="step"><b>Quality</b><span>flag + validation report</span></div>
+      <div class="step"><b>Clean</b><span>cleaned_jds</span></div>
+      <div class="step"><b>Dedup</b><span>v2 representatives + audit</span></div>
+      <div class="step"><b>Normalize</b><span>rules dictionary</span></div>
+      <div class="step"><b>Eligibility</b><span>v2 + evidence</span></div>
+      <div class="step"><b>Publish</b><span>immutable versioned master</span></div>
+    </div>
+    <ul class="checks">
+      <li>Checkpoint hợp lệ được tái sử dụng (<code>CACHED</code>), lỗi dừng sớm</li>
+      <li>Khóa <code>flock</code> ngăn hai coordinator chạy cùng lúc</li>
+      <li>Event log tại <code>logs/pipeline.jsonl</code></li>
+      <li>Release mới cần version mới — không ghi đè release cũ</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6 RELEASE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Curated release</div>
+    <h2>Release bất biến, truy vết được</h2>
+    <p class="muted" style="max-width:62ch">Audit trước khi phát hành kiểm tra toàn chuỗi: count, schema metadata, member mapping,
+      và run lại eligibility. Corpus M02 đóng băng theo group ID dedup_v2 kèm provenance, input hash, cleaned description/requirements.</p>
+    <div class="two-tone">
+      <span class="pill ok">M02 corpus đóng băng · 5,753 candidates</span>
+      <span class="pill ok">Preflight offline PASS</span>
+      <span class="pill warn">Live Gemini là thao tác riêng, dùng quota</span>
+    </div>
+    <div class="note">Nhãn rule/Gemini đều là <b>đề xuất</b>, không phải ground truth — điều này được giữ nhất quán trong toàn bộ thiết kế.</div>
+  </div>
+</section>
+
+<!-- 7 RECONCILE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Reconciliation</div>
+    <h2>Đối chiếu nhãn legacy → M02</h2>
+    <p class="muted" style="max-width:62ch">Đối chiếu <code>roles_v8</code> với <code>m02_v1</code>, ghi artifact riêng trong
+      <code>data/reconciliation</code> — không sửa corpus đóng băng, nhãn legacy hay checkpoint.</p>
+    <div class="cols">
+      <div>
+        <h3 style="color:var(--accent);margin-bottom:.8rem">Kết quả thực tế — 9,427 nhóm</h3>
+        <ul class="bar-list">
+          <li class="bar"><div class="row"><b class="v" style="color:var(--accent)">104</b><span class="muted">Transferred</span></div>
+            <div class="track"><div class="fill" style="width:1.1%"></div></div></li>
+          <li class="bar"><div class="row"><b class="v" style="color:var(--warn)">5,508</b><span class="muted">Pending</span></div>
+            <div class="track"><div class="fill" style="width:58%;background:linear-gradient(90deg,var(--warn),var(--warn))"></div></div></li>
+          <li class="bar"><div class="row"><b class="v" style="color:var(--danger)">3,815</b><span class="muted">Blocked</span></div>
+            <div class="track"><div class="fill" style="width:40%;background:linear-gradient(90deg,var(--danger),var(--danger))"></div></div></li>
+          <li class="bar"><div class="row"><b class="v" style="color:var(--muted)">0</b><span class="muted">Conflict / unmatched</span></div></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color:var(--accent2);margin-bottom:.8rem">Tiêu chí chuyển nghiêm ngặt</h3>
+        <ul class="checks" style="margin-top:0">
+          <li>Match bằng <b>provenance</b>, không join trực tiếp jd_id</li>
+          <li>Hash payload preprocessed trùng hoàn toàn, not “tương tự”</li>
+          <li>Khớp version model/prompt/taxonomy/schema</li>
+          <li>Chỉ nhận PROPOSED; PENDING/review không chuyển</li>
+          <li>Nhãn nhiều legacy ID phải nhất quán, nếu không → blocked</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 CHẤT LƯỢNG -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Chất lượng &amp; CI</div>
+    <h2>Được kiểm chứng, không chỉ “chạy được”</h2>
+    <div class="grid" style="margin-top:1.6rem">
+      <div class="card"><h3>94 PASS</h3><p>Full local suite; 8 SKIP source-only là regression cần dữ liệu local, không thay bằng assertion giả.</p></div>
+      <div class="card"><h3><code>pip check</code> sạch</h3><p>Không dependency bị hỏng trong môi trường hiện tại.</p></div>
+      <div class="card"><h3>CI offline</h3><p>GitHub Actions <code>tests.yml</code> chạy bộ test offline, không cần key/data local.</p></div>
+      <div class="card"><h3>Không leak secret</h3><p>Không phát hiện pattern API key/token; <code>git check-ignore</code> xác nhận <code>.env</code>/data bị loại.</p></div>
+    </div>
+    <ul class="checks">
+      <li>Fixture mock HTTP — upstream GitHub thật không đảm bảo schema ổn định</li>
+      <li>Overlay reconcile chưa tự seed SQLite worker live — nằm trong work còn lại</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9 TỔNG KẾT -->
+<section class="slide">
+  <div class="wrap">
+    <div class="kicker">Tổng kết</div>
+    <h2>Đã làm được</h2>
+    <ul class="checks" style="grid-template-columns:1fr;max-width:70ch;margin-inline:auto">
+      <li>Pipeline M01→M03 thống nhất qua CLI <code>src.pipeline</code>, với checkpoint/fingerprint/resume atomic</li>
+      <li>Curated release bất biến theo version + corpus M02 đóng băng (5,753 candidates), preflight PASS</li>
+      <li>Reconciliation có bằng chứng: 104 nhãn chuyển được, không sửa dữ liệu gốc</li>
+      <li>Test 94 PASS offline, CI cấu hình, repo sạch secret &amp; dataset giữ local</li>
+      <li>Thiết kế kiêm mục tiêu: nhãn luôn là <b>đề xuất</b>, truy vết được từng quyết định</li>
+    </ul>
+    <div class="note" style="margin-inline:auto;max-width:70ch;text-align:center">
+      Work còn lại: importer overlay reconcile vào run live có kiểm thử; integration full new-source production thật; live Gemini provider validation.
+    </div>
+  </div>
+</section>
+
+</div>
+
+<nav>
+  <button class="arrow" id="prev" aria-label="Trước">←</button>
+  <div class="dots" id="dots"></div>
+  <button class="arrow" id="next" aria-label="Sau">→</button>
+  <div class="count" id="count"></div>
+</nav>
+
+<script>
+(function(){
+  var slides=Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots=document.getElementById('dots'),prev=document.getElementById('prev'),
+      next=document.getElementById('next'),count=document.getElementById('count'),
+      bar=document.getElementById('progress');
+  var i=0;
+  slides.forEach(function(s,k){
+    var b=document.createElement('button');
+    b.setAttribute('aria-label','Slide '+(k+1));
+    b.onclick=function(){go(k,true)};
+    dots.appendChild(b);
+  });
+  var dotList=Array.prototype.slice.call(dots.children);
+
+  function go(n,manual){
+    i=Math.max(0,Math.min(n,slides.length-1));
+    slides.forEach(function(s,k){s.classList.toggle('current',k===i)});
+    dotList.forEach(function(d,k){d.classList.toggle('on',k===i)});
+    count.textContent=(i+1)+' / '+slides.length;
+    bar.style.width=(((i+1)/slides.length)*100)+'%';
+    if(manual&&window.claude&&window.claude.regbutton){window.claude.regbutton();
+      slides[i].scrollTop=i===0?0:0;}
+    if(manual&&typeof window.claude!=='undefined'&&window.claude&&window.claude.section){}
+  }
+  prev.onclick=function(){go(i-1,true)};
+  next.onclick=function(){go(i+1,true)};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' ')go(i+1,true);
+    else if(e.key==='ArrowLeft'||e.key==='PageUp')go(i-1,true);
+    else if(e.key==='Home')go(0,true);
+    else if(e.key==='End')go(slides.length-1,true);
+  });
+  // swipe support
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return;
+    var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>46)go((dx<0)?i+1:i-1,true);
+    x0=null;
+  },{passive:true});
+  go(0);
+})();
+</script>

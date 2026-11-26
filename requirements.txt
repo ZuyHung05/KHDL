@@ -1,3 +1,21 @@
 -r requirements-m01.txt
 -r requirements-preparation.txt
 -r requirements-classification.txt
+
+google-genai==3.6.1
+pydantic==2.14.4
+python-dotenv==1.2.4
+PyYAML==6.0.3
+matplotlib==3.9.4
+requests
+beautifulsoup4
+lxml
+pandas
+anthropic
+playwright
+tqdm
+matplotlib
+PyYAML>=6.0
+matplotlib>=3.5
+pytest>=7.0
+PyYAML>=6,<7

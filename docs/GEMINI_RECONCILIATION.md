@@ -21,3 +21,4 @@ Kết quả thực tế: 9.427 nhóm có provenance match; 104 transferred, 5.50
 - `report.json`: số lượng, reasons và input hashes.
 
 Overlay này chưa tự ghi vào SQLite hay tasks của run live; worker full cũ vẫn đọc frozen candidates của corpus. Downstream cần dùng overlay/remaining queue và duy trì versions tương ứng, hoặc xây importer có kiểm thử trước khi seed một run mới. Không thay tasks của gemini_full_v1. Nhãn chuyển tiếp vẫn không phải gold; việc validate quote chỉ xác nhận bằng chứng tồn tại, không chứng minh suy luận role đúng.
+j

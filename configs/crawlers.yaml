@@ -1,0 +1,58 @@
+browser:
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+  locale: vi-VN
+  timezone_id: Asia/Ho_Chi_Minh
+  viewport: {width: 1280, height: 900}
+  fallback_dns: "10.36.255.51"
+  nav_timeout_ms: 60000
+  stealth_init: "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});Object.defineProperty(navigator,'languages',{get:()=>['vi-VN','vi','en-US','en']});Object.defineProperty(navigator,'plugins',{get:()=>[1,2,3,4,5]});window.chrome=window.chrome||{runtime:{}};"
+
+sites:
+  itviec:
+    url: "https://itviec.com/it-jobs"
+    host: itviec.com
+    profile: data/browser_profiles/itviec
+    default_pages: 30
+    paged_url_template: "?page={n}&query=&source=search_job"
+    listing_selector: "h3 a[href*='/it-jobs/']"
+    cloudflare:
+      markers: ["just a moment", "attention required", "cf-browser-verification", "chờ một chút", "đang kiểm tra trình duyệt", "vui lòng chờ"]
+      dom_selector: "#challenge-form, #cf-challenge-running, .cf-browser-verification"
+      timeout_ms: 120000
+    wait:
+      first_page_ms: 2500
+      per_page_ms: 1500
+      render_ms: 1200
+      pacing_ms: 0
+    stop_after_consecutive_no_new: 0
+
+  topcv:
+    url: "https://www.topcv.vn/tim-viec-lam-cong-nghe-thong-tin-cr257"
+    host: www.topcv.vn
+    profile: data/browser_profiles/topcv
+    default_pages: 50
+    paged_url_template: "?page={n}"
+    listing_selector: "div.job-item-search-result"
+    cloudflare:
+      markers: ["just a moment", "attention required", "cf-browser-verification", "chờ một chút", "đang kiểm tra trình duyệt", "vui lòng chờ"]
+      dom_selector: "#challenge-form, #cf-challenge-running, .cf-browser-verification"
+      timeout_ms: 45000
+    wait:
+      first_page_ms: 3000
+      per_page_ms: 2000
+      render_ms: 1200
+      pacing_ms: 1500
+    stop_after_consecutive_no_new: 3
+    resume: true
+
+  topdev:
+    url: "https://topdev.vn/jobs/search"
+    enabled: false
+
+  vietnamworks:
+    url: "https://www.vietnamworks.com/it-jobs"
+    enabled: false
+
+  linkedin:
+    url: "https://www.linkedin.com/jobs/search/?location=Vietnam"
+    enabled: false
