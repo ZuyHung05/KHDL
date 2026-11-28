@@ -16,8 +16,5 @@ htmlcov/
 *.sqlite
 *.sqlite-*
 *.db
-# Large external archives and migration inventory
+# External archives kept locally under docs/reference/
 *.zip
-/docs/project_file_inventory.json
-/docs/PRE_REFACTOR_*
-/docs/LEGACY_PROJECT_README.md

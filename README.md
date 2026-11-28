@@ -1,61 +1,71 @@
-# IT4930 — Job Data Engineering Pipeline
+# KHDL — Thu thập và chuẩn bị JD IT
 
-Pipeline thu thập và chuẩn bị dữ liệu tuyển dụng, với phân loại role Gemini có checkpoint và kiểm soát quota. **KHDL là project root duy nhất.** Nhãn rule/Gemini là nhãn đề xuất, chưa phải ground truth.
+Một luồng hiện hành: **crawl TopCV/ITviec → lấy JD chi tiết → preparation → báo cáo và biểu đồ**. Nhãn nghề và trạng thái phù hợp là nhãn quy tắc, cần kiểm toán mẫu trước khi dùng làm ground truth.
+
+## Cấu trúc
+
+| Thư mục | Vai trò |
+|---|---|
+| `crawlers/` | Trình duyệt chung và crawler trang danh sách TopCV |
+| `src/collection/` | Crawl theo nghề, lịch crawl tháng và tách JD chi tiết |
+| `src/preparation/` | Pipeline duy nhất: chuẩn hoá đầu vào, đánh giá phạm vi, gộp URL, gán nhóm/nghề/kỹ năng, xuất báo cáo |
+| `src/pipeline.py` | CLI để chạy preparation trên tệp đầu vào khai báo rõ |
+| `configs/crawlers.yaml` | Cấu hình trình duyệt và trang TopCV |
+| `.github/workflows/` | Kiểm thử offline và crawl theo lịch tháng |
+| `tests/` | Chỉ kiểm thử các chức năng còn duy trì |
+| `data/` | Dữ liệu chạy pipeline tại máy, không đưa lên Git |
+| `datasets/eligible_jds.csv` | Bản JD phù hợp được công bố cho thành viên phân tích |
+
+Kiến trúc và hợp đồng dữ liệu: [ARCHITECTURE.md](docs/ARCHITECTURE.md), [DATA_PIPELINE.md](docs/DATA_PIPELINE.md), [CURATED_DATA_CONTRACT.md](docs/CURATED_DATA_CONTRACT.md). Các phần đã xoá và số liệu đối chiếu: [CLEANUP_20261127.md](docs/CLEANUP_20261127.md).
 
 ## Cài đặt
 
-Python 3.11; macOS hoặc Linux (các worker sử dụng `flock`).
-
-```sh
-python3 -m venv .venv
+```bash
+python3.11 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+.venv/bin/python -m playwright install chrome
 .venv/bin/python -m pytest -q
 ```
 
-Chỉ khi cần Gemini, tạo `.env` từ `.env.example` nếu chưa có rồi điền key của bạn. Không commit key. Crawler trình duyệt là tùy chọn, dùng `requirements-crawlers.txt`. Unit tests và fixture integration chạy offline, không cần key hoặc dataset local. Các regression tests trên dữ liệu thật tự skip khi dataset chưa có.
+## Crawl và preparation
 
-## Chạy pipeline
+```bash
+# Chạy một snapshot mới bằng Chrome ẩn (mỗi website được giới hạn trang/JD).
+.venv/bin/python -m src.collection.monthly_crawl \
+  --out-dir data/monthly_crawl/2026-12
 
-```sh
-# Xem stage nào có thể tái sử dụng; không ghi dữ liệu
+# Chạy lại toàn bộ corpus: bản nhập lịch sử và một hay nhiều batch crawl mới.
+.venv/bin/python -m src.pipeline prepare \
+  --input data/inputs/legacy_import_20261127.parquet \
+  --input data/monthly_crawl/2026-12/jobs.jsonl \
+  --run-id all_2026_12 --execute
+
+# Liệt kê các bản kết quả đã tạo.
 .venv/bin/python -m src.pipeline status
-.venv/bin/python -m src.pipeline all
-
-# Thu thập nguồn: chỉ lệnh có --execute mới tải và ghi snapshot
-.venv/bin/python -m src.pipeline ingest --source it_job_posting --execute
-
-# M02 theo thứ tự, tự tiếp tục từ checkpoint hợp lệ, xuất release mới
-.venv/bin/python -m src.pipeline all --execute --resume --version v2
-
-# Hoặc bao gồm ingestion và chuẩn bị corpus M03 offline trong một lệnh
-.venv/bin/python -m src.pipeline all --with-ingest --execute --resume --version v2 --prepare-corpus --corpus m02_v2
-
-# Chạy tới một stage cùng các dependency trước đó
-.venv/bin/python -m src.pipeline normalize --execute
-
-# Đối chiếu nhãn legacy -> M02; artifact riêng, không sửa checkpoint
-.venv/bin/python -m src.pipeline reconcile --execute
-
-# Kiểm tra corpus offline, không gọi Gemini
-.venv/bin/python -m src.pipeline gemini --corpus m02_v1
 ```
 
-`--resume` dùng fingerprint input/config/code và checksum output; đây cũng là mặc định. Stage lỗi dừng pipeline và không ghi checkpoint thành công. Curated release đã tồn tại không bị ghi đè: cần version mới nếu input thay đổi. `status --execute` vẫn chỉ xem trạng thái. Dùng riêng `publish --execute --version VERSION` để audit và phát hành staging đã hợp lệ.
+Mỗi lần `prepare` tạo thư mục bất biến `data/curated/preparation/<run-id>/`, gồm ba CSV chia sẻ: `jds_all.csv`, `jds_eligible.csv`, `jds_eligible_labeled.csv`. Nếu thêm tháng tiếp theo, khai báo **toàn bộ** batch JSONL cần tính cùng bản nhập lịch sử. Không tự nối dữ liệu giữa các runner GitHub. Đầu vào local cũ đã được giữ ở `data/inputs/legacy_import_20261127.parquet`; đây là **văn bản đã biến đổi**, không phải HTML gốc. JSONL crawl lịch sử được lưu ở `data/raw/crawled_history/`.
 
-Gemini live là thao tác riêng dùng quota:
+Release tổng hợp hiện có cho nhóm: `data/curated/preparation/share_20261128/` (10.125 JD; 4.467 phù hợp; 3.279 phù hợp và đã có nghề chính). Xem `manifest.json` cùng thư mục khi trao đổi tệp để kiểm tra phiên bản và checksum.
 
-```sh
-.venv/bin/python -m src.classification.runner resume --run-id gemini_full_v1
+## Dataset chia sẻ cho nhóm
+
+[**datasets/eligible_jds.csv**](datasets/eligible_jds.csv) là một tệp CSV UTF-8 có BOM, **4.467 JD duy nhất** từ release `share_20261128` (28/11/2026). Mỗi dòng có `jd_id`, nguồn và URL gốc, title, công ty, địa điểm, trạng thái Việt Nam/IT, nhóm nghề, nghề chính, mức chứng cứ gán nghề, kỹ năng và nội dung nhiệm vụ/yêu cầu/quyền lợi trong `jd_text`. Tất cả dòng đều có `eligibility_status=eligible` theo quy tắc hiện tại; **1.188 dòng có `primary_role=unknown`** nên chưa dùng làm nhãn nghề. Có 1.757 dòng `transformed_text`, 1.048 `partial_jd` và 1.662 `full_jd`; các trạng thái này đánh dấu chất lượng văn bản, không chứng minh HTML gốc đầy đủ.
+
+Nguồn theo `source_id`: `it_job_posting` 2.076, `data_job_analysis` 1.757, `dpl_evaluation` 262, TopCV 262, ITviec 110. `source_url` giúp truy xuất bài gốc khi còn tồn tại. Bản công bố đã thay **194 email và 65 số điện thoại** trong nội dung bằng nhãn giữ chỗ; bản gốc vẫn ở `data/` local. Đây là nhãn tự động phục vụ nghiên cứu, chưa phải ground truth; kiểm toán mẫu trước khi huấn luyện hoặc kết luận thị trường. Nội dung đến từ bên thứ ba; thành viên cần kiểm tra điều kiện sử dụng của từng nguồn trước khi tái phát hành ở nơi khác.
+
+Ví dụ đọc bằng Python:
+
+```python
+import pandas as pd
+jobs = pd.read_csv('datasets/eligible_jds.csv', encoding='utf-8-sig')
+known_roles = jobs[jobs['primary_role'] != 'unknown']
 ```
 
-Lệnh này tiếp tục **legacy roles_v8**. Không đổi corpus của run cũ. Corpus `m02_v1` có group IDs M02 riêng; nhãn được chuyển nằm trong `data/reconciliation/transferred_predictions.jsonl`, hàng đợi chưa có nhãn chuyển nằm trong `remaining_candidates.jsonl`. Đây là overlay/hàng đợi riêng, chưa tự seed SQLite của run live mới; không dùng lệnh legacy full rồi giả định nó tự bỏ qua overlay này.
+CSV này bắt đầu từ release `share_20261128`. Mỗi tháng, workflow chạy preparation cho batch mới, che thông tin liên hệ, gộp JD phù hợp vào tệp này theo URL/ID TopCV và commit nếu nội dung đổi. Khi URL trùng, bản có nội dung đầy đủ hơn được giữ lại. Vì GitHub runner không có toàn bộ đầu vào lịch sử, đây là **tập JD phù hợp tích lũy theo các lần chạy**, không phải bản chạy lại toàn corpus theo quy tắc mới. Tin cũ có thể đã hết hạn; kiểm tra `source_url` trước khi xem là vị trí đang tuyển. Nếu quy tắc preparation thay đổi, cần chạy lại toàn bộ input trên máy và thay thế bản công bố sau khi kiểm toán.
 
-## Thêm nguồn
+## Lịch GitHub Actions
 
-Thêm nguồn vào `configs/sources.yaml` và allowlist `docs/nguondatagithub.txt`, sau đó khai báo mapping rõ ràng ở `configs/source_adapter_mappings.yaml`. Schema chưa hỗ trợ sẽ báo lỗi; tên repository không đủ để hiểu ngữ nghĩa field. Test `tests/test_new_source_e2e.py` đi thực sự từ registry → ingestion → curated bằng schema giả lập khác biệt; chỉ HTTP được mock.
+Workflow [monthly-job-crawl.yml](.github/workflows/monthly-job-crawl.yml) chạy **09:17 ngày 1 hằng tháng giờ Việt Nam**, hoặc chạy thủ công bằng `workflow_dispatch`. Nó dùng một phiên Chrome ẩn, dừng nguồn khi gặp Cloudflare, chạy cùng pipeline preparation trên snapshot tháng và lưu `summary.json`. Nếu có JD phù hợp mới, workflow cập nhật `datasets/eligible_jds.csv` và push bằng `GITHUB_TOKEN` (cần quyền ghi nhánh trong cấu hình repository). Artifact JD đầy đủ của tháng chỉ được tải lên khi repository private; GitHub artifact hết hạn tối đa sau 90 ngày. Lịch chỉ hoạt động khi workflow nằm trên default branch. Nếu toàn bộ nguồn bị chặn hoặc không tải được JD, run báo lỗi và không cập nhật CSV.
 
-## Dữ liệu và GitHub
-
-Code, cấu hình, tests và tài liệu được đưa lên Git. `data/`, logs, secrets, môi trường local, SQLite/checkpoint và ZIP bên ngoài được giữ local qua `.gitignore`; repo public không kèm dữ liệu gốc hoặc giấy phép phân phối dataset. Kiểm tra điều kiện từng nguồn trước khi chia sẻ dataset. GitHub Actions chạy bộ tests offline.
-
-Chi tiết: [Architecture](docs/ARCHITECTURE.md), [Pipeline](docs/DATA_PIPELINE.md), [Reconciliation](docs/GEMINI_RECONCILIATION.md), [Test report](docs/TEST_REPORT.md), [GitHub readiness](docs/GITHUB_READINESS.md).
+Chưa bật LLM tự động. Code phân loại Gemini cũ và checkpoint gắn với pipeline đã bỏ không còn trong luồng hiện hành. Muốn gán nhãn `unknown` bằng LLM về sau cần kho lưu riêng, khóa API, hạn mức token và kiểm toán nhãn.

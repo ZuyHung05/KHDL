@@ -1,15 +1,17 @@
-.PHONY: crawl-topcv crawl-description
+PYTHON ?= .venv/bin/python
+RUN_ID ?= manual_$(shell date +%Y%m%d_%H%M%S)
 
-crawl-topcv:
-	python -m src.collection.crawler_ingestion --source topcv
+.PHONY: test status crawl-monthly prepare
 
-crawl-description:
-	python -m src.collection.crawler_ingestion --source $(SOURCE) --phase descriptions $(if $(filter 1 true yes,$(HEADLESS)),--headless,)
-
-.PHONY: pipeline status test
-pipeline:
-	.venv/bin/python -m src.pipeline all --execute --version $(or $(VERSION),v2)
-status:
-	.venv/bin/python -m src.pipeline status
 test:
-	.venv/bin/python -m pytest -q
+	$(PYTHON) -m pytest -q
+
+status:
+	$(PYTHON) -m src.pipeline status
+
+crawl-monthly:
+	$(PYTHON) -m src.collection.monthly_crawl --out-dir data/monthly_crawl/$(RUN_ID)
+
+# Optional INPUTS="data/inputs/legacy_import_20261127.parquet data/monthly_crawl/.../jobs.jsonl"
+prepare:
+	$(PYTHON) -m src.pipeline prepare --run-id $(RUN_ID) --execute $(foreach input,$(INPUTS),--input $(input))
