@@ -43,6 +43,8 @@ jobs:
             --base datasets/eligible_jds.csv \
             --incoming "$RUN_DIR/eligible_public.csv" \
             --out datasets/eligible_jds.csv
+      - name: Run offline tests before publishing
+        run: python -m pytest -q
       - name: Commit shared CSV if it changed
         run: |
           git add datasets/eligible_jds.csv
